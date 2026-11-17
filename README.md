@@ -1,4 +1,4 @@
-# VIGILANT: NOMS 2027 demo
+# NOMS 2027 demo
 
 Vertical slice of VIGILANT for the NOMS 2027
 demo paper: an analyst question in Open WebUI becomes a **fixed, audited
