@@ -1,6 +1,6 @@
 OLLAMA_MODEL ?= qwen2.5:72b
 
-.PHONY: install dev test lint format up up-ui ollama-model down migrate migration
+.PHONY: install dev test lint format env up up-ui ollama-model tokens down migrate migration
 
 install:
 	uv sync
@@ -25,6 +25,14 @@ format:
 	uv run ruff format .
 	uv run ruff check --fix .
 
+env:
+	@test ! -e .env || { echo ".env already exists, keeping it"; exit 1; }
+	@sed -e "s/^HERMES_API_SERVER_KEY=.*/HERMES_API_SERVER_KEY=$$(openssl rand -hex 24)/" \
+	     -e "s/^HERMES_UID=.*/HERMES_UID=$$(id -u)/" \
+	     -e "s/^HERMES_GID=.*/HERMES_GID=$$(id -g)/" env.example > .env
+	@chmod 600 .env
+	@echo ".env created"
+
 up:
 	docker compose up -d
 
@@ -32,11 +40,10 @@ up-ui:
 	docker compose -f docker-compose.yml -f docker-compose.dev-ui.yml up -d
 
 ollama-model:
-	@models="$$(docker exec vigilant-ollama ollama list)"; \
-	printf '%s\n' "$$models"; \
-	if ! printf '%s\n' "$$models" | tail -n +2 | grep -q '[^[:space:]]'; then \
-		docker exec -it vigilant-ollama ollama pull $(OLLAMA_MODEL); \
-	fi
+	docker exec vigilant-ollama ollama pull $(OLLAMA_MODEL)
+
+tokens:
+	@docker exec -i vigilant-hermes python3 - $(or $(N),10) $(if $(ALL),--all) < scripts/hermes_tokens.py
 
 down:
 	docker compose -f docker-compose.yml -f docker-compose.dev-ui.yml down

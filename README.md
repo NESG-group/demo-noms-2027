@@ -42,25 +42,62 @@ Open WebUI -> vigilant-backend (FastAPI) -> Hermes Agent -> Ollama
 
 ## Run it
 
-Requires Docker with the NVIDIA runtime (Hermes needs a >= 64K context; see
-`docker-compose.yml`).
+### Requirements
+
+- Linux with an NVIDIA GPU, Docker with Compose v2, the
+  [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/),
+  `make` and `openssl`.
+- Enough GPU memory for Qwen 2.5 72B with a 64K context (the model alone is
+  47 GB), and about 60 GB of free disk for the images and the model.
+- Free ports 3000, 5432, 8000, 8642, 9119 and 11435.
+
+All images are pinned in `docker-compose.yml` and `docker-compose.dev-ui.yml`
+to the versions used for the paper results.
+
+### Start the system
 
 ```bash
-cp env.example .env           # set HERMES_API_SERVER_KEY
-make up-ui                    # ollama + hermes + backend + Open WebUI on :3000
-make ollama-model             # pulls qwen2.5:72b if no model is installed
-docker compose exec vigilant-backend alembic upgrade head   # datalake schema
-
-# register a capture (returns capture_id); see data/README.md for what each one contains
-for f in data/*.pcapng; do curl -F file=@$f http://localhost:8000/v1/datalake/ingest; done
+git clone https://github.com/NESG-group/demo-noms-2027.git && cd demo-noms-2027
+make env            # creates .env: random Hermes API key and your UID/GID
+make up-ui          # postgres, ollama, hermes, backend and Open WebUI
+make ollama-model   # pulls qwen2.5:72b (about 47 GB, only the first time)
 ```
 
-Ask in Open WebUI (http://localhost:3000), e.g. *"Is there ARP spoofing in
-capture `<capture_id>`?"*, then check the ground truth of what was applied:
+The backend applies the datalake schema on start. Check that the chain works
+end to end; it should list the `hermes-agent` model:
+
+```bash
+curl -s http://localhost:8000/v1/models
+```
+
+If it fails, look at `docker logs vigilant-hermes` and
+`docker logs vigilant-backend`.
+
+### Ask the questions
+
+1. Open http://localhost:3000. The first time, Open WebUI asks you to create
+   an admin account; it is local to your machine.
+2. Pick the `hermes-agent` model.
+3. Attach [`data/demo/nmap22-23-53-80-443-threewayhandshake.pcapng`](data/README.md)
+   to the chat and ask one of the questions in
+   [data/demo/scenarios.md](data/demo/scenarios.md), the scenarios used in the
+   paper. That file also has the expected answers.
+
+To see which views the model applied (one line per view call, written by the
+backend whatever the model says):
 
 ```bash
 docker logs vigilant-backend 2>&1 | grep PCAP_VIEW_APPLIED
 ```
+
+To see the tokens used by each question (`N=20` for more rows, `ALL=1` to
+include Open WebUI's own background requests):
+
+```bash
+make tokens
+```
+
+To stop everything: `make down`. Data and the model stay in Docker volumes.
 
 ## Development
 

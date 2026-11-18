@@ -1,6 +1,8 @@
+name: vigilant-demo-noms-2027
+
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
     container_name: vigilant-postgres
     ports:
       - "5432:5432"
@@ -20,7 +22,8 @@ services:
     restart: always
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned to the versions used for the paper results (Ollama 0.33.3).
+    image: ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2
     container_name: vigilant-ollama
     runtime: nvidia
     ports:
@@ -45,7 +48,8 @@ services:
     restart: always
 
   hermes:
-    image: nousresearch/hermes-agent:latest
+    # Hermes Agent 0.21.1
+    image: nousresearch/hermes-agent@sha256:5aa20e4fd299c4f0b3e5de91992fba8d677aa9625feb544a83cfb76fe2b1d7f8
     container_name: vigilant-hermes
     command: gateway run
     ports:
@@ -54,11 +58,16 @@ services:
     environment:
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
-      - API_SERVER_KEY=${HERMES_API_SERVER_KEY:-change-me}
+      - API_SERVER_KEY=${HERMES_API_SERVER_KEY:?set HERMES_API_SERVER_KEY in .env (make env)}
+      # Run Hermes as the host user so it does not chown the bind-mounted config and skills.
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
     volumes:
       - hermes-data:/opt/data
       - ./hermes/config.yaml:/opt/data/config.yaml
-      - ./hermes/skills:/opt/data/skills
+      # Read-only: Hermes would otherwise sync its bundled skills into this
+      # directory at boot. The model must only see the skills in this repo.
+      - ./hermes/skills:/opt/data/skills:ro
     depends_on:
       - ollama
       - vigilant-backend
@@ -74,15 +83,17 @@ services:
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini:ro
       - vigilant-data:/var/lib/vigilant
       - open-webui-data:/var/lib/open-webui/data:ro
     environment:
       - HERMES_BASE_URL=http://hermes:8642/v1
-      - HERMES_API_KEY=${HERMES_API_SERVER_KEY:-change-me}
+      - HERMES_API_KEY=${HERMES_API_SERVER_KEY:?set HERMES_API_SERVER_KEY in .env (make env)}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-vigilant}:${POSTGRES_PASSWORD:-vigilant_pass}@postgres:5432/${POSTGRES_DB:-vigilant_db}
       - PYTHONPATH=/app/src
       - PYTHONUNBUFFERED=1
-    command: uvicorn vigilant.main:app --host 0.0.0.0 --port 8000 --reload
+    # Apply the datalake schema (idempotent) before starting the API.
+    command: sh -c "alembic upgrade head && exec uvicorn vigilant.main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       postgres:
         condition: service_healthy
