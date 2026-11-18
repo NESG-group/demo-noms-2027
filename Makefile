@@ -1,6 +1,6 @@
 OLLAMA_MODEL ?= qwen2.5:72b
 
-.PHONY: install dev test lint format env up up-ui ollama-model tokens down migrate migration
+.PHONY: install dev test lint format env up up-ui ollama-model ground-truth tokens down migrate migration
 
 install:
 	uv sync
@@ -41,6 +41,9 @@ up-ui:
 
 ollama-model:
 	docker exec vigilant-ollama ollama pull $(OLLAMA_MODEL)
+
+ground-truth:
+	uv run --group ground-truth python scripts/ground_truth.py
 
 tokens:
 	@docker exec -i vigilant-hermes python3 - $(or $(N),10) $(if $(ALL),--all) < scripts/hermes_tokens.py

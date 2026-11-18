@@ -4,7 +4,8 @@
 data/
 ├── demo/
 │   ├── nmap22-23-53-80-443-threewayhandshake.pcapng   capture used in the demo
-│   └── scenarios.md                                   paper scenarios: questions, answers, audit, ground truth
+│   ├── scenarios.md                                   paper scenarios: questions, answers, audit, ground truth
+│   └── ground_truth.json                              reference answers (make ground-truth)
 └── fixtures/                                          other captures, used only by the test suite
 ```
 
@@ -25,6 +26,17 @@ single MAC.
 [demo/scenarios.md](demo/scenarios.md) lists the scenarios used in the NOMS
 2027 demo paper: the exact questions asked, the view each one should use, the
 model answers, the audit records (`PCAP_VIEW_APPLIED`) and the ground truth.
+
+[demo/ground_truth.json](demo/ground_truth.json) holds the reference answer of
+every scenario, computed from the capture with PyShark by
+[scripts/ground_truth.py](../scripts/ground_truth.py), following the method of
+the companion paper's repository. C1-C3 are questions of the paper and match its
+ground truth for this trace; the convention used for each question is written
+next to its function. To regenerate it (needs `tshark` on the host):
+
+```bash
+make ground-truth
+```
 
 ## Test fixtures
 

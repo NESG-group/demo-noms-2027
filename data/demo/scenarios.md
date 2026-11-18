@@ -1,6 +1,6 @@
 # Demo scenarios (NOMS 2027)
 
-All questions use the upload flow (the PCAP is attached to the chat), Qwen 2.5 72B, and a capture of an Nmap scan of ports 22, 23, 53, 80, and 443 (`nmap22-23-53-80-443-threewayhandshake.pcapng`).
+All questions use the upload flow (the PCAP is attached to the chat), Qwen 2.5 72B, and a capture of an Nmap scan of ports 22, 23, 53, 80, and 443 (`nmap22-23-53-80-443`).
 
 ## Scenario 1: one view per question
 
@@ -14,7 +14,7 @@ All questions use the upload flow (the PCAP is attached to the chat), Qwen 2.5 7
 
 | ID | Type | Views | Question |
 | --- | --- | --- | --- |
-| C4 | Cross-layer correlation | `pcap_ip`, `pcap_udp` | List the source IP addresses belonging to private RFC 1918 ranges and their corresponding UDP destination ports. Present the results using the format: Source IP - Destination port |
+| C4 | Cross-layer correlation | `pcap_ip`, `pcap_tcp` | List the source IP addresses belonging to private RFC1918 ranges and their corresponding TCP destination ports. Present the results using the format: `Source IP - Destination port` |
 | C5 | Multi-flow session reconstruction | `pcap_ip`, `pcap_tcp` | For each (source IP, destination IP) pair that exchanged TCP traffic, list every distinct TCP session (client_port -> server_port) initiated between them. For each session report: whether the three-way handshake completed, whether the session was closed with FIN, whether the session was reset with RST, and the number of packets exchanged in each direction |
 
 ## Results
@@ -81,4 +81,59 @@ View: correct. Answer: incorrect (the model listed every scanned port).
 
 ### Scenario 2
 
-Pending.
+#### C4: cross-layer correlation
+
+Model answer:
+
+```
+192.168.1.15 - 23
+192.168.1.15 - 80
+192.168.1.15 - 22
+192.168.1.15 - 53
+192.168.1.15 - 443
+192.168.1.1 - 62053
+```
+
+Audit records:
+
+```
+PCAP_VIEW_APPLIED {"capture_id": "d00487dc-2b62-484c-82b7-c04da9f82cb2", "tool": "pcap_ip", "display_filter": "ip", "offset": 0, "returned": 30, "matched": 30}
+PCAP_VIEW_APPLIED {"capture_id": "d00487dc-2b62-484c-82b7-c04da9f82cb2", "tool": "pcap_udp", "display_filter": "udp && !icmp && !icmpv6", "offset": 0, "returned": 8, "matched": 8}
+```
+
+Ground truth: the same six pairs (192.168.1.1 - 62053; 192.168.1.15 - 22, 23, 53, 80, 443).
+
+Views: correct (both). Answer: correct.
+
+#### C5: multi-flow session reconstruction
+
+Model answer (summarized as a table; the model returned a nested list):
+
+| Source IP | Destination IP | Session | Handshake completed | Closed with FIN | Reset with RST | Client to server | Server to client |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 192.168.1.15 | 192.168.1.1 | 55020 -> 443 | No | No | Yes | 1 | 1 |
+| 192.168.1.15 | 192.168.1.1 | 53322 -> 80 | Yes | No | Yes | 2 | 2 |
+| 192.168.1.15 | 192.168.1.1 | 41558 -> 22 | Yes | No | Yes | 2 | 2 |
+| 192.168.1.15 | 192.168.1.1 | 60812 -> 23 | No | No | Yes | 1 | 1 |
+| 192.168.1.15 | 192.168.1.1 | 37912 -> 53 | Yes | No | Yes | 2 | 2 |
+
+The model closed with: "Each session's details are based on the TCP packets exchanged between the source and destination IP addresses."
+
+Audit records:
+
+```
+PCAP_VIEW_APPLIED {"capture_id": "3dd576c4-d3c9-4094-8f9c-a953cb4069d2", "tool": "pcap_ip", "display_filter": "ip", "offset": 0, "returned": 30, "matched": 30}
+PCAP_VIEW_APPLIED {"capture_id": "3dd576c4-d3c9-4094-8f9c-a953cb4069d2", "tool": "pcap_tcp", "display_filter": "tcp && !icmp && !icmpv6", "offset": 0, "returned": 16, "matched": 16}
+```
+
+Ground truth (PyShark):
+
+| Session | Handshake completed | FIN | RST | Client to server | Server to client |
+| --- | --- | --- | --- | --- | --- |
+| 37912 -> 53 | Yes | No | Yes | 3 | 1 |
+| 41558 -> 22 | Yes | No | Yes | 3 | 1 |
+| 53322 -> 80 | Yes | No | Yes | 3 | 1 |
+| 55020 -> 443 | No | No | Yes | 1 | 1 |
+| 60812 -> 23 | No | No | Yes | 1 | 1 |
+
+Views: correct (both). Answer: partly correct. Handshake, FIN, and RST fields match for all five sessions, and the packet counts match for 443 and 23. For 53, 22, and 80 the model reports 2 packets in each direction instead of 3 client packets and 1 server packet.
