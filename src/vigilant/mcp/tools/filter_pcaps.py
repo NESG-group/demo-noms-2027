@@ -462,10 +462,10 @@ async def pcap_arp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT
 
 
 async def pcap_tcp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
-    """Packets whose outer transport is TCP, with ports, flags, seq/ack and stream."""
+    """Packets whose outer transport is TCP, with ports, flags and seq/ack (no IP addresses)."""
     return await _field_view(capture_id, "tcp", offset, limit)
 
 
 async def pcap_udp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
-    """Packets whose outer transport is UDP, with ports, length and stream."""
+    """Packets whose outer transport is UDP, with ports and length (no IP addresses)."""
     return await _field_view(capture_id, "udp", offset, limit)

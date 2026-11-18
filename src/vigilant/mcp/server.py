@@ -65,9 +65,11 @@ async def list_captures(start: str | None = None, end: str | None = None) -> lis
 @mcp.tool()
 async def pcap_ip(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
     """
-    IPv4 view of a stored capture: src/dst, protocol name, TTL and IP length
-    per packet. Use it for L3 questions (who talks to whom, TTL anomalies,
-    protocol distribution). No ports, no flags, no application text.
+    IPv4 view of a stored capture: frame number, src/dst IP, protocol name,
+    TTL and IP header fields per packet. Use it for L3 questions (who talks to
+    whom, TTL anomalies, protocol distribution). No ports, no flags, no
+    application text. To pair IPs with TCP/UDP fields, join with pcap_tcp or
+    pcap_udp on frame.number.
 
     capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
     """
@@ -97,10 +99,11 @@ async def pcap_arp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFi
 @mcp.tool()
 async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
     """
-    TCP view of a stored capture: addresses, ports, flags (e.g. "SYN,ACK"),
-    seq/ack, window, payload length and stream index per packet. Use it for
-    handshakes, SYN scans, resets and connection behaviour. ICMP errors that
-    merely quote a TCP header are excluded.
+    TCP view of a stored capture: frame number, ports, flags (e.g. "SYN,ACK"),
+    seq/ack, window and payload length per packet. No IP addresses: join with
+    pcap_ip on frame.number when they are needed. Use it for handshakes, SYN
+    scans, resets and connection behaviour. ICMP errors that merely quote a TCP
+    header are excluded.
 
     capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
     """
@@ -114,9 +117,10 @@ async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFi
 @mcp.tool()
 async def pcap_udp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
     """
-    UDP view of a stored capture: addresses, ports, UDP length and stream index
-    per packet. Use it for DNS/NTP/DHCP-style traffic, beaconing patterns and
-    UDP scans. ICMP errors that merely quote a UDP header are excluded.
+    UDP view of a stored capture: frame number, ports and UDP length per
+    packet. No IP addresses: join with pcap_ip on frame.number when they are
+    needed. Use it for DNS/NTP/DHCP-style traffic, beaconing patterns and UDP
+    scans. ICMP errors that merely quote a UDP header are excluded.
 
     capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
     """
