@@ -104,6 +104,64 @@ class TestStagePcapAttachments:
 
         assert result == [{"role": "user", "content": text}]
 
+    def test_open_webui_rag_payload_for_pcap_is_reduced_to_question(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        uploads, staging = tmp_path / "uploads", tmp_path / "staging"
+        uploads.mkdir()
+        monkeypatch.setattr(pcap_utils, "OPEN_WEBUI_UPLOADS_ROOT", uploads)
+        monkeypatch.setattr(pcap_utils, "STAGING_ROOT", staging)
+        file_id = "b72fb36a-2ffd-446f-895c-a5d3291928fb"
+        (uploads / f"{file_id}_capture.pcapng").write_bytes(b"pcap-bytes")
+        source = f'<source id="1" name="capture.pcapng" resource-type="file" resource-id="{file_id}">'
+        text = (
+            "### Task:\nRespond to the user query using the provided context.\n\n"
+            f"<context>\n{source}\x0a\x0d\xc3\xbfbinary-chunk-1</source>\n"
+            f"{source}binary-chunk-2</source>\n</context>\n\n"
+            "<attached_files>\n"
+            f'<file type="file" id="{file_id}" url="{file_id}" name="capture.pcapng"/>\n'
+            "</attached_files>\n\n"
+            "List the source IP addresses."
+        )
+
+        result = pcap_staging.stage_pcap_attachments([ChatMessage(role="user", content=text)])
+
+        content = result[0]["content"]
+        assert isinstance(content, str)
+        question, marker = content.split("\n", 1)
+        assert question == "List the source IP addresses."
+        assert marker.startswith("[pcap attachment staged: pcap_ref=")
+        assert marker.endswith(", filename=capture.pcapng]")
+        assert file_id not in content
+
+    def test_open_webui_rag_payload_keeps_non_pcap_sources(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        uploads, staging = tmp_path / "uploads", tmp_path / "staging"
+        uploads.mkdir()
+        monkeypatch.setattr(pcap_utils, "OPEN_WEBUI_UPLOADS_ROOT", uploads)
+        monkeypatch.setattr(pcap_utils, "STAGING_ROOT", staging)
+        pcap_id = "b72fb36a-2ffd-446f-895c-a5d3291928fb"
+        notes_id = "a828a4b2-3023-4603-af46-cfd2e3ec96d5"
+        (uploads / f"{pcap_id}_capture.pcapng").write_bytes(b"pcap-bytes")
+        (uploads / f"{notes_id}_notes.txt").write_bytes(b"some notes")
+        text = (
+            "### Task:\nRespond using the context.\n\n<context>\n"
+            f'<source id="1" resource-id="{pcap_id}">binary</source>\n'
+            f'<source id="2" resource-id="{notes_id}">some notes</source>\n'
+            "</context>\n\nWhat do the notes say?"
+        )
+
+        result = pcap_staging.stage_pcap_attachments([ChatMessage(role="user", content=text)])
+
+        content = result[0]["content"]
+        assert isinstance(content, str)
+        assert content.startswith("### Task:")
+        assert f'resource-id="{notes_id}">some notes</source>' in content
+        assert pcap_id not in content
+        assert "binary" not in content
+        assert "[pcap attachment staged: pcap_ref=" in content
+
     def test_text_part_passes_through_untouched(self) -> None:
         messages = [
             ChatMessage(role="user", content=[{"type": "text", "text": "analiza esto"}]),
