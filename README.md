@@ -59,8 +59,9 @@ to the versions used for the paper results.
 ```bash
 git clone https://github.com/NESG-group/demo-noms-2027.git && cd demo-noms-2027
 make env            # creates .env: random Hermes API key and your UID/GID
-make up-ui          # postgres, ollama, hermes, backend and Open WebUI
+make up             # postgres, ollama, hermes, backend
 make ollama-model   # pulls qwen2.5:72b (about 47 GB, only the first time)
+make up-ui          # Open WebUI
 ```
 
 The backend applies the datalake schema on start. Check that the chain works
