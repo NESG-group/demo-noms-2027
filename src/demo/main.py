@@ -3,14 +3,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from vigilant.api.router import api_router
-from vigilant.config import settings
-from vigilant.mcp.server import mcp
-from vigilant.services.hermes_client import HermesClient
+from demo.api.router import api_router
+from demo.config import settings
+from demo.mcp.server import mcp
+from demo.services.hermes_client import HermesClient
 
 mcp.settings.streamable_http_path = "/"
 if mcp.settings.transport_security is not None:
-    mcp.settings.transport_security.allowed_hosts.append("vigilant-backend:8000")
+    mcp.settings.transport_security.allowed_hosts.append("demo-backend:8000")
 
 hermes_client = HermesClient()
 

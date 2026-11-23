@@ -8,12 +8,12 @@ from typing import Final, TypedDict
 
 from scapy.utils import PcapReader
 
-from vigilant.config import settings
-from vigilant.db.session import get_session
-from vigilant.services.datalake_ingest import ingest_capture_to_datalake
+from demo.config import settings
+from demo.db.session import get_session
+from demo.services.datalake_ingest import ingest_capture_to_datalake
 
-STAGING_ROOT: Final[Path] = Path(os.environ.get("VIGILANT_STAGING_DIR", "/var/lib/vigilant/staging"))
-QUARANTINE_ROOT: Final[Path] = Path(os.environ.get("VIGILANT_QUARANTINE_DIR", "/var/lib/vigilant/quarantine"))
+STAGING_ROOT: Final[Path] = Path(os.environ.get("DEMO_STAGING_DIR", "/var/lib/demo/staging"))
+QUARANTINE_ROOT: Final[Path] = Path(os.environ.get("DEMO_QUARANTINE_DIR", "/var/lib/demo/quarantine"))
 MAX_PCAP_BYTES: Final[int] = 500 * 1024 * 1024
 
 _PCAP_MAGICS: Final[frozenset[bytes]] = frozenset(
@@ -80,7 +80,7 @@ async def ingest_pcap(pcap_ref: str) -> IngestResult | IngestError:
     queryable afterwards (via `list_captures`) once the
     quarantine copy is deleted.
 
-    pcap_ref: the short reference emitted by vigilant-backend when it
+    pcap_ref: the short reference emitted by demo-backend when it
     staged the attachment (e.g. "pcap_ref=..." text the LLM read from the
     conversation and is passing through verbatim). This is never a
     filesystem path and never raw content.

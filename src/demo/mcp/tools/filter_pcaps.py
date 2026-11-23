@@ -3,7 +3,7 @@
 Each view is a fixed display filter plus a fixed set of tshark fields. The
 capture is read in place from the datalake: nothing is written to disk. The
 functions here are pure (no FastMCP dependency) so they can be tested on their
-own; ``vigilant.mcp.server`` wraps them as MCP tools.
+own; ``demo.mcp.server`` wraps them as MCP tools.
 
 Design notes:
     * Output is streamed from tshark and bounded: only ``limit`` rows (after
@@ -26,7 +26,7 @@ from typing import Final, Literal
 
 from pydantic import BaseModel
 
-from vigilant.mcp.tools.get_pcaps import get_capture_file_path
+from demo.mcp.tools.get_pcaps import get_capture_file_path
 
 _TSHARK: Final[str] = "tshark"
 _TIMEOUT_S: Final[float] = 120.0
@@ -39,12 +39,12 @@ _MAX_WARNING_CHARS: Final[int] = 300
 
 # One line per view call, parseable with `grep pcap_view_applied`. This is the ground truth of which
 # filter was applied, independent of what the LLM says in its answer.
-_AUDIT_LOG = logging.getLogger("vigilant.pcap_views")
+_AUDIT_LOG = logging.getLogger("demo.pcap_views")
 
 # Same fact as one plain line on stdout (prefix + JSON). The rich console handler wraps long records over
 # several lines, which makes `docker logs` hard to parse; scripts/run_questions.py reads this line instead.
 AUDIT_PREFIX: Final[str] = "PCAP_VIEW_APPLIED "
-_AUDIT_JSON_LOG = logging.getLogger("vigilant.pcap_views.audit")
+_AUDIT_JSON_LOG = logging.getLogger("demo.pcap_views.audit")
 _AUDIT_JSON_LOG.setLevel(logging.INFO)
 _AUDIT_JSON_LOG.propagate = False
 if not _AUDIT_JSON_LOG.handlers:
@@ -342,7 +342,7 @@ async def _run_tshark(args: Sequence[str], *, offset: int, limit: int) -> tuple[
             limit=_STREAM_LIMIT_BYTES,
         )
     except FileNotFoundError as exc:
-        raise TsharkError("tshark is not installed on the VIGILANT backend") from exc
+        raise TsharkError("tshark is not installed on the backend") from exc
 
     if proc.stdout is None or proc.stderr is None:
         raise TsharkError("could not attach to tshark output streams")

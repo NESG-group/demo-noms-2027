@@ -3,7 +3,7 @@ name: pcap-filter
 description: ALWAYS use when the message contains a `[pcap attachment staged: pcap_ref=...]` marker, even if the question is only about IPs, ports or protocols: ingest the capture first, then answer. Also use for any analysis of ALREADY STORED captures (capture_id, UUID, latest capture, time range, listing available captures): any question about the packets, addresses, ports or protocols they contain. Applies the matching view (pcap_tcp, pcap_udp, pcap_arp, pcap_ip).
 ---
 
-# VIGILANT: Protocol Filtering and Packet Views of Stored Captures
+# Protocol Filtering and Packet Views of Stored Captures
 
 ## Hard rules
 

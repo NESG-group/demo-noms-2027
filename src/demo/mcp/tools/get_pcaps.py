@@ -6,8 +6,8 @@ from datetime import datetime
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from vigilant.db.models import Capture
-from vigilant.db.session import get_session
+from demo.db.models import Capture
+from demo.db.session import get_session
 
 
 class CaptureSummary(BaseModel):

@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from vigilant.api.v1 import chat as chat_module
-from vigilant.services.scope import SCOPE_PROMPT
+from demo.api.v1 import chat as chat_module
+from demo.services.scope import SCOPE_PROMPT
 
 
 def test_models_falls_back_when_hermes_unreachable(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -20,7 +20,7 @@ def test_models_falls_back_when_hermes_unreachable(client: TestClient, monkeypat
 
     assert response.status_code == 200
     body = response.json()
-    assert body["data"][0]["owned_by"] == "vigilant-fallback"
+    assert body["data"][0]["owned_by"] == "demo-fallback"
 
 
 def test_models_returns_hermes_models(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

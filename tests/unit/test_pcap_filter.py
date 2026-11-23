@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from vigilant.mcp.server import mcp
-from vigilant.mcp.tools import filter_pcaps
-from vigilant.mcp.tools.filter_pcaps import (
+from demo.mcp.server import mcp
+from demo.mcp.tools import filter_pcaps
+from demo.mcp.tools.filter_pcaps import (
     PcapFilterResult,
     TsharkError,
     pcap_arp,
@@ -16,7 +16,7 @@ from vigilant.mcp.tools.filter_pcaps import (
     pcap_tcp,
     pcap_udp,
 )
-from vigilant.mcp.tools.get_pcaps import CaptureNotFoundError
+from demo.mcp.tools.get_pcaps import CaptureNotFoundError
 
 FIXTURES = Path(__file__).parents[2] / "data" / "fixtures"
 
@@ -227,7 +227,7 @@ async def test_views_are_registered_as_mcp_tools() -> None:
 
 async def test_mcp_tool_forwards_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     """The MCP wrapper parses capture_id and forwards paging arguments."""
-    from vigilant.mcp import server
+    from demo.mcp import server
 
     cid = uuid.uuid4()
     seen: dict[str, object] = {}
@@ -256,7 +256,7 @@ async def test_mcp_tool_forwards_arguments(monkeypatch: pytest.MonkeyPatch) -> N
 
 async def test_mcp_view_text_is_compact_json(monkeypatch: pytest.MonkeyPatch) -> None:
     """The text sent to the model is compact JSON (Hermes truncates large results) and keeps the schema."""
-    from vigilant.mcp import server
+    from demo.mcp import server
 
     cid = uuid.uuid4()
     expected = PcapFilterResult(
@@ -338,9 +338,9 @@ def test_view_call_is_audit_logged(caplog: pytest.LogCaptureFixture) -> None:
     """Every view call leaves one parseable log line with the filter, independent of the LLM answer."""
     import logging
 
-    from vigilant.mcp.tools.filter_pcaps import _result
+    from demo.mcp.tools.filter_pcaps import _result
 
-    with caplog.at_level(logging.INFO, logger="vigilant.pcap_views"):
+    with caplog.at_level(logging.INFO, logger="demo.pcap_views"):
         _result(uuid.uuid4(), "arp", "arp", [], [], 3, 0, None)
 
     assert "pcap_view_applied" in caplog.text
@@ -353,7 +353,7 @@ def test_view_call_emits_one_line_json_audit_record() -> None:
     import json
     import logging
 
-    from vigilant.mcp.tools.filter_pcaps import AUDIT_PREFIX, _result
+    from demo.mcp.tools.filter_pcaps import AUDIT_PREFIX, _result
 
     class _Collect(logging.Handler):
         def __init__(self) -> None:
@@ -364,7 +364,7 @@ def test_view_call_emits_one_line_json_audit_record() -> None:
             self.messages.append(record.getMessage())
 
     collector = _Collect()
-    audit = logging.getLogger("vigilant.pcap_views.audit")
+    audit = logging.getLogger("demo.pcap_views.audit")
     audit.addHandler(collector)
     capture_id = uuid.uuid4()
     try:

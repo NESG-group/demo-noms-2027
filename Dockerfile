@@ -33,4 +33,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "vigilant.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "demo.main:app", "--host", "0.0.0.0", "--port", "8000"]

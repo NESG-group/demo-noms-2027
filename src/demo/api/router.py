@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 
-from vigilant.api.v1 import chat
-from vigilant.api.v1.datalake.router import datalake_router
-from vigilant.api.v1.pcap.router import pcap_router
+from demo.api.v1 import chat
+from demo.api.v1.datalake.router import datalake_router
+from demo.api.v1.pcap.router import pcap_router
 
 api_router = APIRouter()
 

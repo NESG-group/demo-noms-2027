@@ -1,6 +1,6 @@
 from typing import Any
 
-from vigilant.services.scope import SCOPE_PROMPT, with_scope_prompt
+from demo.services.scope import SCOPE_PROMPT, with_scope_prompt
 
 
 def test_with_scope_prompt_puts_scope_first_and_keeps_order() -> None:

@@ -3,10 +3,10 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from vigilant.config import settings
-from vigilant.db.models import Capture
-from vigilant.db.session import get_session
-from vigilant.services.datalake_ingest import ingest_capture_to_datalake
+from demo.config import settings
+from demo.db.models import Capture
+from demo.db.session import get_session
+from demo.services.datalake_ingest import ingest_capture_to_datalake
 
 
 async def ingest_pcap_bytes(data: bytes) -> Capture:

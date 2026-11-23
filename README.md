@@ -1,12 +1,12 @@
 # NOMS 2027 demo
 
-Vertical slice of VIGILANT for the NOMS 2027
-demo paper: an analyst question in Open WebUI becomes a **fixed, audited
+Code of the NOMS 2027 demo paper *From Natural-Language Questions to Auditable
+Packet Evidence with an Agentic LLM*: an analyst question in Open WebUI becomes a **fixed, audited
 tshark filter** over a stored capture, and the LLM answers from that evidence.
 This repository contains only what that flow needs.
 
 ```
-Open WebUI -> vigilant-backend (FastAPI) -> Hermes Agent -> Ollama
+Open WebUI -> demo-backend (FastAPI) -> Hermes Agent -> Ollama
                     |  sanitise, stage attachments,  |
                     |  prepend scope prompt          |
                     +--------- MCP (/mcp) -----------+
@@ -16,16 +16,16 @@ Open WebUI -> vigilant-backend (FastAPI) -> Hermes Agent -> Ollama
 ## The flow
 
 1. The analyst asks in Open WebUI (`docker-compose.dev-ui.yml`).
-2. The API ([chat.py](src/vigilant/api/v1/chat.py)) stages attachments
-   outside the conversation ([staging.py](src/vigilant/api/v1/pcap/staging.py):
+2. The API ([chat.py](src/demo/api/v1/chat.py)) stages attachments
+   outside the conversation ([staging.py](src/demo/api/v1/pcap/staging.py):
    the model only sees a `pcap_ref`) and prepends the scope prompt
-   ([scope.py](src/vigilant/services/scope.py)).
+   ([scope.py](src/demo/services/scope.py)).
 3. Hermes offers the model its skills and the MCP tools of
-   [server.py](src/vigilant/mcp/server.py).
+   [server.py](src/demo/mcp/server.py).
 4. The model loads the `pcap-filter` skill
    ([SKILL.md](hermes/skills/security/pcap-filter/SKILL.md)) and picks a view
    (`pcap_tcp`, `pcap_arp`, ...).
-5. The view ([filter_pcaps.py](src/vigilant/mcp/tools/filter_pcaps.py)) runs a
+5. The view ([filter_pcaps.py](src/demo/mcp/tools/filter_pcaps.py)) runs a
    hard-coded display filter and logs one audit line, independent of what the
    model later says:
    ```
@@ -71,8 +71,8 @@ end to end; it should list the `hermes-agent` model:
 curl -s http://localhost:8000/v1/models
 ```
 
-If it fails, look at `docker logs vigilant-hermes` and
-`docker logs vigilant-backend`.
+If it fails, look at `docker logs demo-hermes` and
+`docker logs demo-backend`.
 
 ### Ask the questions
 
@@ -88,7 +88,7 @@ To see which views the model applied (one line per view call, written by the
 backend whatever the model says):
 
 ```bash
-docker logs vigilant-backend 2>&1 | grep PCAP_VIEW_APPLIED
+docker logs demo-backend 2>&1 | grep PCAP_VIEW_APPLIED
 ```
 
 To see the tokens used by each question (`N=20` for more rows, `ALL=1` to

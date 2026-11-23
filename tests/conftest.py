@@ -3,7 +3,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from vigilant.main import app
+from demo.main import app
 
 
 @pytest.fixture

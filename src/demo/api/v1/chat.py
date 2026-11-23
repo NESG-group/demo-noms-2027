@@ -7,11 +7,11 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from vigilant.api.v1.chat_schema import ChatMessage
-from vigilant.api.v1.pcap.staging import stage_pcap_attachments
-from vigilant.config import settings
-from vigilant.services.hermes_client import HermesClient
-from vigilant.services.scope import with_scope_prompt
+from demo.api.v1.chat_schema import ChatMessage
+from demo.api.v1.pcap.staging import stage_pcap_attachments
+from demo.config import settings
+from demo.services.hermes_client import HermesClient
+from demo.services.scope import with_scope_prompt
 
 router = APIRouter()
 hermes_client = HermesClient()
@@ -64,7 +64,7 @@ async def list_models() -> ModelList:
                 ModelInfo(
                     id=settings.default_llm_model,
                     created=int(time.time()),
-                    owned_by="vigilant-fallback",
+                    owned_by="demo-fallback",
                 )
             ]
         )
@@ -88,7 +88,7 @@ async def chat_completions(request: ChatCompletionRequest) -> StreamingResponse 
     """Handle chat completion requests by proxying them to Hermes.
 
     Any pcap/pcapng attachments in the incoming messages are extracted and
-    written to VIGILANT's staging directory here, in code, before the
+    written to the backend's staging directory here, in code, before the
     request reaches Hermes — the LLM only ever sees a short `pcap_ref`
     text reference, never the raw binary content.
     """

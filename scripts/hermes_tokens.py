@@ -2,7 +2,7 @@
 
 Runs INSIDE the hermes container (stdlib only), fed through stdin:
 
-    docker exec -i vigilant-hermes python3 - [LIMIT] [--all] < scripts/hermes_tokens.py
+    docker exec -i demo-hermes python3 - [LIMIT] [--all] < scripts/hermes_tokens.py
 
 One row per Hermes session (one chat turn). Open WebUI's auxiliary requests
 (title, tags, follow-ups, search queries), which also go through the agent,

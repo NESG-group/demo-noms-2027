@@ -4,8 +4,8 @@ from typing import Any
 import httpx
 import pytest
 
-from vigilant.services import hermes_client as hermes_module
-from vigilant.services.hermes_client import HermesClient, HermesClientError
+from demo.services import hermes_client as hermes_module
+from demo.services.hermes_client import HermesClient, HermesClientError
 
 
 class FakeResponse:

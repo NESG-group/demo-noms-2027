@@ -7,7 +7,7 @@ from sqlalchemy import TIMESTAMP, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from vigilant.db.base import Base
+from demo.db.base import Base
 
 
 class Capture(Base):

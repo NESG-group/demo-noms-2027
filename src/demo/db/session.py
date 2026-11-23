@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from vigilant.config import settings
+from demo.config import settings
 
 engine: AsyncEngine = create_async_engine(settings.database_url, echo=settings.db_echo, pool_pre_ping=True)
 

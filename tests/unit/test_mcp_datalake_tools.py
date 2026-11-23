@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from vigilant.mcp import server as server_module
-from vigilant.mcp.server import mcp
-from vigilant.mcp.tools.get_pcaps import (
+from demo.mcp import server as server_module
+from demo.mcp.server import mcp
+from demo.mcp.tools.get_pcaps import (
     CaptureNotFoundError,
     CaptureSummary,
 )

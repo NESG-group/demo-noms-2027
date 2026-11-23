@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from vigilant.api.v1.datalake import ingest as ingest_module
-from vigilant.api.v1.datalake import router as router_module
-from vigilant.db.models import Capture
+from demo.api.v1.datalake import ingest as ingest_module
+from demo.api.v1.datalake import router as router_module
+from demo.db.models import Capture
 
 
 @pytest.mark.asyncio

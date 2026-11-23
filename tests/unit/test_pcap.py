@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from vigilant.api.v1.chat_schema import ChatMessage
-from vigilant.api.v1.pcap import staging as pcap_staging
-from vigilant.api.v1.pcap import utils as pcap_utils
+from demo.api.v1.chat_schema import ChatMessage
+from demo.api.v1.pcap import staging as pcap_staging
+from demo.api.v1.pcap import utils as pcap_utils
 
 
 class TestLooksLikePcap:

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from vigilant.config import settings
-from vigilant.main import app
+from demo.config import settings
+from demo.main import app
 
 
 def test_app_title_matches_settings() -> None:

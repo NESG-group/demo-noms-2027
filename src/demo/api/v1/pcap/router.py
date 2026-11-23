@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi import Path as FastAPIPath
 from fastapi.responses import FileResponse
 
-from vigilant.api.v1.pcap.utils import staged_file_path
+from demo.api.v1.pcap.utils import staged_file_path
 
 pcap_router = APIRouter()
 

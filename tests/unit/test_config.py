@@ -1,13 +1,13 @@
 import pytest
 
-from vigilant.config import Settings
+from demo.config import Settings
 
 
 def test_settings_defaults() -> None:
     """Settings should fall back to documented defaults when no env vars are set."""
     settings = Settings()
 
-    assert settings.project_name == "VIGILANT"
+    assert settings.project_name == "NOMS 2027 demo"
     assert settings.api_v1_prefix == "/v1"
     assert settings.default_llm_model == "qwen2.5:72b"
 

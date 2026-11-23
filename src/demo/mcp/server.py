@@ -7,19 +7,19 @@ from typing import Annotated
 from mcp.server.fastmcp import FastMCP
 from mcp.types import CallToolResult, TextContent
 
-from vigilant.mcp.tools.filter_pcaps import PcapFilterResult
-from vigilant.mcp.tools.filter_pcaps import pcap_arp as _pcap_arp
-from vigilant.mcp.tools.filter_pcaps import pcap_ip as _pcap_ip
-from vigilant.mcp.tools.filter_pcaps import pcap_tcp as _pcap_tcp
-from vigilant.mcp.tools.filter_pcaps import pcap_udp as _pcap_udp
-from vigilant.mcp.tools.get_pcaps import CaptureNotFoundError, CaptureSummary
-from vigilant.mcp.tools.get_pcaps import (
+from demo.mcp.tools.filter_pcaps import PcapFilterResult
+from demo.mcp.tools.filter_pcaps import pcap_arp as _pcap_arp
+from demo.mcp.tools.filter_pcaps import pcap_ip as _pcap_ip
+from demo.mcp.tools.filter_pcaps import pcap_tcp as _pcap_tcp
+from demo.mcp.tools.filter_pcaps import pcap_udp as _pcap_udp
+from demo.mcp.tools.get_pcaps import CaptureNotFoundError, CaptureSummary
+from demo.mcp.tools.get_pcaps import (
     list_captures as _list_captures,
 )
-from vigilant.mcp.tools.ingest_pcap import IngestError, IngestResult
-from vigilant.mcp.tools.ingest_pcap import ingest_pcap as _ingest_pcap
+from demo.mcp.tools.ingest_pcap import IngestError, IngestResult
+from demo.mcp.tools.ingest_pcap import ingest_pcap as _ingest_pcap
 
-mcp = FastMCP("vigilant-network")
+mcp = FastMCP("pcap-views")
 
 
 def _parse_capture_id(capture_id: str) -> uuid.UUID:
@@ -46,7 +46,7 @@ def _compact(result: PcapFilterResult) -> CallToolResult:
 
 @mcp.tool()
 async def ping() -> str:
-    """Health-check tool used to verify MCP connectivity (Hermes <-> VIGILANT, FastAPI <-> VIGILANT)."""
+    """Health-check tool used to verify MCP connectivity (Hermes <-> backend, FastAPI <-> backend)."""
     return "pong"
 
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from vigilant.api.v1.datalake.ingest import ingest_pcap_bytes
-from vigilant.api.v1.pcap.utils import looks_like_pcap
+from demo.api.v1.datalake.ingest import ingest_pcap_bytes
+from demo.api.v1.pcap.utils import looks_like_pcap
 
 datalake_router = APIRouter()
 

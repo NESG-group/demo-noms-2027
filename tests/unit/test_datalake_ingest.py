@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from scapy.utils import wrpcap
 
-from vigilant.db.models import Capture
-from vigilant.services.datalake_ingest import ingest_capture_to_datalake
+from demo.db.models import Capture
+from demo.services.datalake_ingest import ingest_capture_to_datalake
 
 DATA_PCAPS = Path(__file__).parents[2] / "data" / "fixtures"
 

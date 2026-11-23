@@ -7,7 +7,7 @@ from pathlib import Path
 from scapy.utils import PcapReader
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from vigilant.db.models import Capture
+from demo.db.models import Capture
 
 
 async def ingest_capture_to_datalake(

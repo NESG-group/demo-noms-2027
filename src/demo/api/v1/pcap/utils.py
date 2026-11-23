@@ -69,7 +69,7 @@ def read_open_webui_file(file_id: str) -> tuple[str, bytes] | None:
 
 # --- Staging storage ---------------------------------------------------------
 
-STAGING_ROOT: Final[Path] = Path(os.environ.get("VIGILANT_STAGING_DIR", "/var/lib/vigilant/staging"))
+STAGING_ROOT: Final[Path] = Path(os.environ.get("DEMO_STAGING_DIR", "/var/lib/demo/staging"))
 
 
 def stage_bytes(data: bytes) -> str:

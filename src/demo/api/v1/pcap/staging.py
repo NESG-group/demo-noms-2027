@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import Final
 
-from vigilant.api.v1.chat_schema import ChatMessage, FilePart, ImagePart, TextPart
-from vigilant.api.v1.pcap.utils import UUID_PATTERN, decode_data_uri, looks_like_pcap, read_open_webui_file, stage_bytes
+from demo.api.v1.chat_schema import ChatMessage, FilePart, ImagePart, TextPart
+from demo.api.v1.pcap.utils import UUID_PATTERN, decode_data_uri, looks_like_pcap, read_open_webui_file, stage_bytes
 
 # Open WebUI treats an attached file as a RAG document: it wraps the user query in its RAG
 # template, inlines the file's "extracted text" (for a pcap, the raw binary decoded as text)

@@ -12,7 +12,7 @@ migration:
 	uv run alembic revision --autogenerate -m "$(m)"
 
 dev:
-	uv run uvicorn vigilant.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn demo.main:app --reload --host 0.0.0.0 --port 8000
 
 test:
 	uv run pytest -v
@@ -40,13 +40,13 @@ up-ui:
 	docker compose -f docker-compose.yml -f docker-compose.dev-ui.yml up -d
 
 ollama-model:
-	docker exec vigilant-ollama ollama pull $(OLLAMA_MODEL)
+	docker exec demo-ollama ollama pull $(OLLAMA_MODEL)
 
 ground-truth:
 	uv run --group ground-truth python scripts/ground_truth.py
 
 tokens:
-	@docker exec -i vigilant-hermes python3 - $(or $(N),10) $(if $(ALL),--all) < scripts/hermes_tokens.py
+	@docker exec -i demo-hermes python3 - $(or $(N),10) $(if $(ALL),--all) < scripts/hermes_tokens.py
 
 down:
 	docker compose -f docker-compose.yml -f docker-compose.dev-ui.yml down

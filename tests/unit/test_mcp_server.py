@@ -5,11 +5,11 @@ from typing import Any
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from vigilant.api.v1.chat_schema import ChatMessage
-from vigilant.api.v1.pcap import staging as pcap_staging
-from vigilant.api.v1.pcap import utils as pcap_utils
-from vigilant.mcp.server import mcp
-from vigilant.mcp.tools import ingest_pcap as ingest_module
+from demo.api.v1.chat_schema import ChatMessage
+from demo.api.v1.pcap import staging as pcap_staging
+from demo.api.v1.pcap import utils as pcap_utils
+from demo.mcp.server import mcp
+from demo.mcp.tools import ingest_pcap as ingest_module
 
 
 async def test_ping_tool_returns_pong() -> None:
@@ -129,7 +129,7 @@ def test_main_runs_mcp_server(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(mcp, "run", fake_run)
 
-    from vigilant.mcp.server import main
+    from demo.mcp.server import main
 
     main()
 

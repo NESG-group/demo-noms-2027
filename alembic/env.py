@@ -7,8 +7,8 @@ from alembic import context
 from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from vigilant.config import settings
-from vigilant.db.base import Base
+from demo.config import settings
+from demo.db.base import Base
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

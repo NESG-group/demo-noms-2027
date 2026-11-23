@@ -4,7 +4,7 @@ from typing import Any, cast
 
 import httpx
 
-from vigilant.config import settings
+from demo.config import settings
 
 
 class HermesClientError(RuntimeError):
