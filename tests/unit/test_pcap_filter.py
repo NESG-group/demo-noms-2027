@@ -254,6 +254,38 @@ async def test_mcp_tool_forwards_arguments(monkeypatch: pytest.MonkeyPatch) -> N
     assert seen == {"capture_id": cid, "offset": 5, "limit": 7}
 
 
+async def test_mcp_view_text_is_compact_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The text sent to the model is compact JSON (Hermes truncates large results) and keeps the schema."""
+    from vigilant.mcp import server
+
+    cid = uuid.uuid4()
+    expected = PcapFilterResult(
+        capture_id=cid,
+        view="udp",
+        display_filter="udp && !icmp && !icmpv6",
+        columns=["frame.number", "udp.dstport"],
+        rows=[["1", "123"], ["2", "53"]],
+        matched_count=2,
+        offset=0,
+        truncated=False,
+    )
+
+    async def fake_udp(capture_id: uuid.UUID, offset: int, limit: int) -> PcapFilterResult:
+        return expected
+
+    monkeypatch.setattr(server, "_pcap_udp", fake_udp)
+
+    async with create_connected_server_and_client_session(mcp._mcp_server) as client:
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+        result = await client.call_tool("pcap_udp", {"capture_id": str(cid)})
+
+    text = result.content[0].text
+    assert "\n" not in text
+    assert PcapFilterResult.model_validate_json(text) == expected
+    assert PcapFilterResult.model_validate(result.structuredContent) == expected
+    assert tools["pcap_udp"].outputSchema["properties"].keys() >= {"rows", "truncated", "matched_count"}
+
+
 async def test_unfiltered_views_are_not_exposed() -> None:
     """Unfiltered views are not registered."""
     async with create_connected_server_and_client_session(mcp._mcp_server) as client:

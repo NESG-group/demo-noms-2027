@@ -6,22 +6,22 @@ All questions use the upload flow (the PCAP is attached to the chat), Qwen 2.5 7
 
 | ID | Type | View | Question |
 | --- | --- | --- | --- |
-| C1 | Single-field extraction | `pcap_ip` | List the unique IPv4 addresses that appear as source or destination of IPv4 packets in the trace |
-| C2 | Single-layer aggregation | `pcap_arp` | List the unique ARP flows found in the trace. For each one report: sender MAC address, target MAC address, sender IP address and target IP address |
-| C3 | Intra-layer state reconstruction | `pcap_tcp` | List the destination ports where a TCP connection attempt was explicitly refused with a RST packet. Report as a simple list of ports |
+| Q1 | Single-field extraction | `pcap_ip` | List the unique IPv4 addresses that appear as source or destination of IPv4 packets in the trace |
+| Q2 | Single-layer aggregation | `pcap_arp` | List the unique ARP flows found in the trace. For each one report: sender MAC address, target MAC address, sender IP address and target IP address |
+| Q3 | Intra-layer state reconstruction | `pcap_tcp` | List the destination ports where a TCP connection attempt was explicitly refused with a RST packet. Report as a simple list of ports |
 
 ## Scenario 2: questions needing two views
 
 | ID | Type | Views | Question |
 | --- | --- | --- | --- |
-| C4 | Cross-layer correlation | `pcap_ip`, `pcap_tcp` | List the source IP addresses belonging to private RFC1918 ranges and their corresponding TCP destination ports. Present the results using the format: `Source IP - Destination port` |
-| C5 | Multi-flow session reconstruction | `pcap_ip`, `pcap_tcp` | For each (source IP, destination IP) pair that exchanged TCP traffic, list every distinct TCP session (client_port -> server_port) initiated between them. For each session report: whether the three-way handshake completed, whether the session was closed with FIN, whether the session was reset with RST, and the number of packets exchanged in each direction. Present the results using the format: `Source IP - Destination IP | Source port - Destination port | Handshake: yes/no | FIN: yes/no | RST: yes/no | Packets src->dst: N | Packets dst->src: M` |
+| Q4 | Cross-layer correlation | `pcap_ip`, `pcap_tcp` | List the source IP addresses belonging to private RFC1918 ranges and their corresponding TCP destination ports. Present the results using the format: `Source IP - Destination port` |
+| Q5 | Multi-flow session reconstruction | `pcap_ip`, `pcap_tcp` | For each (source IP, destination IP) pair that exchanged TCP traffic, list every distinct TCP session (client_port -> server_port) initiated between them. For each session report: whether the three-way handshake completed, whether the session was closed with FIN, whether the session was reset with RST, and the number of packets exchanged in each direction. Present the results using the format: `Source IP - Destination IP | Source port - Destination port | Handshake: yes/no | FIN: yes/no | RST: yes/no | Packets src->dst: N | Packets dst->src: M` |
 
 ## Results
 
 ### Scenario 1
 
-#### C1: single-field extraction
+#### Q1: single-field extraction
 
 Model answer:
 
@@ -39,7 +39,7 @@ PCAP_VIEW_APPLIED {"capture_id": "4e3e744b-3f14-4b4b-a9f0-e17f79424e75", "tool":
 
 View: correct. Answer: correct.
 
-#### C2: single-layer aggregation
+#### Q2: single-layer aggregation
 
 Model answer:
 
@@ -60,7 +60,7 @@ PCAP_VIEW_APPLIED {"capture_id": "73b42d24-fcc6-423d-abba-a955b035b03f", "tool":
 
 View: correct. Answer: correct.
 
-#### C3: intra-layer state reconstruction
+#### Q3: intra-layer state reconstruction
 
 Model answer:
 
@@ -81,7 +81,7 @@ View: correct. Answer: incorrect (the model listed every scanned port).
 
 ### Scenario 2
 
-#### C4: cross-layer correlation
+#### Q4: cross-layer correlation
 
 Model answer:
 
@@ -105,7 +105,7 @@ Ground truth: the same six pairs (192.168.1.1 - 62053; 192.168.1.15 - 22, 23, 53
 
 Views: correct (both). Answer: correct.
 
-#### C5: multi-flow session reconstruction
+#### Q5: multi-flow session reconstruction
 
 Model answer (summarized as a table; the model returned a nested list):
 
@@ -136,16 +136,5 @@ Ground truth (PyShark):
 | 55020 -> 443 | No | No | Yes | 1 | 1 |
 | 60812 -> 23 | No | No | Yes | 1 | 1 |
 
-Second run, with the formatted question:
-
-```
-192.168.1.15 - 192.168.1.1 | 55020 - 443 | Handshake: no | FIN: no | RST: yes | Packets src->dst: 1 | Packets dst->src: 1
-192.168.1.15 - 192.168.1.1 | 53322 - 80 | Handshake: yes | FIN: no | RST: yes | Packets src->dst: 2 | Packets dst->src: 3
-192.168.1.15 - 192.168.1.1 | 41558 - 22 | Handshake: yes | FIN: no | RST: yes | Packets src->dst: 1 | Packets dst->src: 2
-192.168.1.15 - 192.168.1.1 | 60812 - 23 | Handshake: no | FIN: no | RST: yes | Packets src->dst: 1 | Packets dst->src: 1
-192.168.1.15 - 192.168.1.1 | 37912 - 53 | Handshake: yes | FIN: no | RST: yes | Packets src->dst: 2 | Packets dst->src: 2
-```
-
-Handshake, FIN, and RST match the ground truth in all five sessions, and the counts match for 443 and 23. For 80, 22, and 53 the counts are wrong again (2/3, 1/2, 2/2 instead of 3/1), and different from the first run.
 
 Views: correct (both). Answer: partly correct. Handshake, FIN, and RST fields match for all five sessions, and the packet counts match for 443 and 23. For 53, 22, and 80 the first run reports 2 packets in each direction instead of 3 client packets and 1 server packet.

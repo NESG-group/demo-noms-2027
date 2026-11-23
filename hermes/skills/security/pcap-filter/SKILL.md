@@ -24,7 +24,7 @@ description: ALWAYS use when the message contains a `[pcap attachment staged: pc
 - `list_captures(start?, end?)`: captures in the datalake, newest first.
 - `ingest_pcap(pcap_ref)`: registers an attachment staged by the API.
 - `pcap_ip`, `pcap_arp`, `pcap_tcp`, `pcap_udp` (parameters: `capture_id`,
-  `offset=0`, `limit=100`). Each applies one fixed display filter.
+  `offset=0`, `limit=100`, at most 150). Each applies one fixed display filter.
 
 ## What each view contains
 

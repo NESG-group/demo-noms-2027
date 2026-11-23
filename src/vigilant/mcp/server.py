@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import CallToolResult, TextContent
 
 from vigilant.mcp.tools.filter_pcaps import PcapFilterResult
 from vigilant.mcp.tools.filter_pcaps import pcap_arp as _pcap_arp
@@ -26,6 +28,20 @@ def _parse_capture_id(capture_id: str) -> uuid.UUID:
         return uuid.UUID(capture_id)
     except ValueError as exc:
         raise ValueError(f"capture_id must be a valid UUID, got {capture_id!r}") from exc
+
+
+def _compact(result: PcapFilterResult) -> CallToolResult:
+    """Send a view as compact JSON.
+
+    FastMCP's default text rendering is ``indent=2``, which puts every cell on its own
+    line and roughly doubles the size. Hermes replaces any MCP result above its
+    per-result budget (~39K chars with context_length 65536) with a 1.5K-char preview,
+    so the model would only see the first rows. The structured content is unchanged.
+    """
+    return CallToolResult(
+        content=[TextContent(type="text", text=result.model_dump_json())],
+        structuredContent=result.model_dump(mode="json"),
+    )
 
 
 @mcp.tool()
@@ -63,7 +79,7 @@ async def list_captures(start: str | None = None, end: str | None = None) -> lis
 
 
 @mcp.tool()
-async def pcap_ip(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
+async def pcap_ip(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     IPv4 view of a stored capture: frame number, src/dst IP, protocol name,
     TTL and IP header fields per packet. Use it for L3 questions (who talks to
@@ -71,33 +87,33 @@ async def pcap_ip(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFil
     application text. To pair IPs with TCP/UDP fields, join with pcap_tcp or
     pcap_udp on frame.number.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
+    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return await _pcap_ip(parsed_id, offset, limit)
+        return _compact(await _pcap_ip(parsed_id, offset, limit))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 
 
 @mcp.tool()
-async def pcap_arp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
+async def pcap_arp(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     ARP view of a stored capture: opcode (1 request, 2 reply) with sender and
     target MAC and IP for every ARP packet, requests included. Use it to
     confirm or refute ARP spoofing, gratuitous ARP or ARP scanning.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
+    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return await _pcap_arp(parsed_id, offset, limit)
+        return _compact(await _pcap_arp(parsed_id, offset, limit))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 
 
 @mcp.tool()
-async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
+async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     TCP view of a stored capture: frame number, ports, flags (e.g. "SYN,ACK"),
     seq/ack, window and payload length per packet. No IP addresses: join with
@@ -105,28 +121,28 @@ async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFi
     scans, resets and connection behaviour. ICMP errors that merely quote a TCP
     header are excluded.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
+    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return await _pcap_tcp(parsed_id, offset, limit)
+        return _compact(await _pcap_tcp(parsed_id, offset, limit))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 
 
 @mcp.tool()
-async def pcap_udp(capture_id: str, offset: int = 0, limit: int = 100) -> PcapFilterResult:
+async def pcap_udp(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     UDP view of a stored capture: frame number, ports and UDP length per
     packet. No IP addresses: join with pcap_ip on frame.number when they are
     needed. Use it for DNS/NTP/DHCP-style traffic, beaconing patterns and UDP
     scans. ICMP errors that merely quote a UDP header are excluded.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging.
+    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return await _pcap_udp(parsed_id, offset, limit)
+        return _compact(await _pcap_udp(parsed_id, offset, limit))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 

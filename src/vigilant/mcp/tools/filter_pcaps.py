@@ -32,7 +32,9 @@ _TSHARK: Final[str] = "tshark"
 _TIMEOUT_S: Final[float] = 120.0
 _STREAM_LIMIT_BYTES: Final[int] = 1024 * 1024
 _DEFAULT_LIMIT: Final[int] = 100
-_MAX_LIMIT: Final[int] = 1000
+# Keeps one page of the widest view (pcap_ip, ~116 chars per row as compact JSON) under
+# Hermes' per-result budget for MCP tools (~39K chars) with margin: the model only has 32K tokens.
+_MAX_LIMIT: Final[int] = 150
 _MAX_WARNING_CHARS: Final[int] = 300
 
 # One line per view call, parseable with `grep pcap_view_applied`. This is the ground truth of which

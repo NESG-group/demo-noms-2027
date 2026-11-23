@@ -79,7 +79,7 @@ If it fails, look at `docker logs vigilant-hermes` and
 1. Open http://localhost:3000. The first time, Open WebUI asks you to create
    an admin account; it is local to your machine.
 2. Pick the `hermes-agent` model.
-3. Attach [`data/demo/nmap22-23-53-80-443-threewayhandshake.pcapng`](data/README.md)
+3. Attach [`data/demo/raw/nmap22-23-53-80-443-threewayhandshake.pcapng`](data/README.md)
    to the chat and ask one of the questions in
    [data/demo/scenarios.md](data/demo/scenarios.md), the scenarios used in the
    paper. That file also has the expected answers.
