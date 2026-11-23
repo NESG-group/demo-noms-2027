@@ -51,10 +51,7 @@ def columns(conn: sqlite3.Connection, table: str) -> set[str]:
 def duration_sql(conn: sqlite3.Connection) -> str:
     """SQL expression for the turn's duration, given the available columns."""
     if "timestamp" in columns(conn, "messages"):
-        return (
-            "(SELECT MAX(m.timestamp) - MIN(m.timestamp) FROM messages m "
-            "WHERE m.session_id = s.id)"
-        )
+        return "(SELECT MAX(m.timestamp) - MIN(m.timestamp) FROM messages m WHERE m.session_id = s.id)"
     if "ended_at" in columns(conn, "sessions"):
         return "(s.ended_at - s.started_at)"
     return "NULL"
