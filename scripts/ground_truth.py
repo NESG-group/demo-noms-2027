@@ -1,4 +1,3 @@
-
 """Ground truth of the demo scenarios (Q1-Q5 in data/demo/scenarios.md), with PyShark."""
 
 from __future__ import annotations
@@ -56,6 +55,7 @@ ClientKey = tuple[str, str, int, int]
 # a spurious crash (retcode 255). The question is rerun from scratch when that happens.
 MAX_ATTEMPTS = 3
 
+
 def _l3_endpoints(pkt: object) -> tuple[str, str]:
     """(src, dst) from IPv4 or IPv6."""
     if hasattr(pkt, "ip"):
@@ -72,8 +72,10 @@ def _is_syn(flags: int) -> bool:  # SYN set, ACK clear
 def _is_synack(flags: int) -> bool:  # SYN and ACK set
     return (flags & (TCP_SYN | TCP_ACK)) == (TCP_SYN | TCP_ACK)
 
+
 def _is_final_ack(flags: int) -> bool:  # ACK set, SYN and RST clear (may carry PSH/data)
     return (flags & (TCP_SYN | TCP_RST | TCP_ACK)) == TCP_ACK
+
 
 def _is_rfc1918(address: str) -> bool:
     try:
@@ -82,8 +84,10 @@ def _is_rfc1918(address: str) -> bool:
         return False
     return any(ip in net for net in RFC1918_NETWORKS)
 
+
 def _yes_no(value: bool) -> str:
     return "yes" if value else "no"
+
 
 def _ip_sort_key(ip_str: str) -> tuple[int, int]:
     """Total order across IPv4 and IPv6.
@@ -95,6 +99,7 @@ def _ip_sort_key(ip_str: str) -> tuple[int, int]:
     """
     ip = ipaddress.ip_address(ip_str)
     return (ip.version, int(ip))
+
 
 # Q1 = IP_QUESTIONS[0] of the paper.
 def list_ipv4_addresses(pcap: str) -> str:
@@ -146,6 +151,7 @@ def tcp_refused_with_rst(pcap: str) -> str:
     if not refused:
         return "No explicitly refused TCP connection attempts found"
     return "Destination ports that refused TCP connections with RST:\n" + "\n".join(str(p) for p in sorted(refused))
+
 
 # Q4
 def rfc1918_sources_udp_ports(pcap: str) -> str:
@@ -202,10 +208,7 @@ def tcp_sessions_per_ip_pair(pcap: str) -> str:
             if client_ip is None:
                 continue
 
-            from_client = (
-                src == client_ip and dst == server_ip
-                and sport == client_port and dport == server_port
-            )
+            from_client = src == client_ip and dst == server_ip and sport == client_port and dport == server_port
             if from_client:
                 to_server += 1
             else:
@@ -219,17 +222,14 @@ def tcp_sessions_per_ip_pair(pcap: str) -> str:
             # State machine with direction checks.
             if state == "SYN_SENT" and _is_synack(flags) and not from_client:
                 state = "SYN_ACK_RECEIVED"
-            elif (state == "SYN_ACK_RECEIVED" and _is_final_ack(flags) and from_client):
+            elif state == "SYN_ACK_RECEIVED" and _is_final_ack(flags) and from_client:
                 state = "ESTABLISHED"
                 handshake = True
 
         if client_ip is None:
             continue  # stream with no SYN seen — skip, like the original
 
-        sessions.append(
-            (client_ip, server_ip, client_port, server_port,
-             handshake, fin, rst, to_server, to_client)
-        )
+        sessions.append((client_ip, server_ip, client_port, server_port, handshake, fin, rst, to_server, to_client))
 
     if not sessions:
         return "No TCP sessions initiated with a SYN found"
@@ -297,8 +297,12 @@ def main() -> None:
         epilog=f"Without arguments, answers the captures in {RAW_DIR}/ and writes gt_basic_demo.json "
         f"and gt_cicids_demo.json in {GT_DIR}/.",
     )
-    parser.add_argument("pcap", nargs="?", type=Path, help="single capture to answer about (default: both demo captures)")
-    parser.add_argument("--output", type=Path, help=f"JSON file to write for PCAP (default: {GT_DIR}/gt_<pcap stem>.json)")
+    parser.add_argument(
+        "pcap", nargs="?", type=Path, help="single capture to answer about (default: both demo captures)"
+    )
+    parser.add_argument(
+        "--output", type=Path, help=f"JSON file to write for PCAP (default: {GT_DIR}/gt_<pcap stem>.json)"
+    )
     args = parser.parse_args()
 
     if args.pcap is None:
