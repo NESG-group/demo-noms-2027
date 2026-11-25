@@ -100,6 +100,51 @@ make tokens
 
 To stop everything: `make down`. Data and the model stay in Docker volumes.
 
+## Multi-user access (optional)
+
+[docker-compose.multiuser.yml](docker-compose.multiuser.yml) adds an HTTPS
+proxy (Caddy) and LDAP login (a bundled [LLDAP](https://github.com/lldap/lldap)
+server) on top of the setup above. Only the proxy listens on the network
+(ports 80/443); everything else stays on `127.0.0.1`. Each user sees only the
+captures they uploaded, and every audit record names the user.
+
+```bash
+make multiuser-env      # adds secrets and DEMO_HOST (this machine's IP) to .env
+make up-multiuser       # starts everything plus proxy and LLDAP
+make multiuser-config   # copies the LDAP settings into Open WebUI's database, restarts it
+```
+
+`make multiuser-config` is needed because Open WebUI only reads its LDAP and
+sign-up variables on its first start; on an existing install it uses the
+values saved in its database.
+
+**Users.** Open the LLDAP admin page at http://127.0.0.1:17170 (from this
+machine, or through an SSH/VS Code port forward), log in as `admin` with
+`LLDAP_ADMIN_PASSWORD` from `.env`, and create each user with an email
+address. They log in at `https://<DEMO_HOST>` with the LDAP form. The local
+Open WebUI admin account keeps working.
+
+**Certificate.** Caddy signs the certificate with its own CA, so browsers warn
+until that CA is trusted. Export it and install it as a trusted root on the
+users' machines (or accept the warning):
+
+```bash
+docker exec demo-proxy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+```
+
+**Another LDAP server.** Set the `LDAP_*` variables in `.env` (see
+[env.example](env.example)), run `make up-multiuser` and `make multiuser-config`
+again. LLDAP then simply goes unused.
+
+**How identity reaches the tools.** Open WebUI signs each request with the
+user's identity (JWT, `USER_JWT_SECRET`) and the backend verifies it. The MCP
+tools are called by Hermes, not by the user, so the backend runs one chat at a
+time and the tools filter by the user of the running chat
+([requester.py](src/demo/services/requester.py)). Ollama answers one request
+at a time anyway, so this costs no throughput. Nothing the model sees changes.
+Captures stored before multi-user mode have no owner and are not shown to
+anyone in this mode.
+
 ## Development
 
 ```bash

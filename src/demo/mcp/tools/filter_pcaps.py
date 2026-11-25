@@ -27,6 +27,7 @@ from typing import Final, Literal
 from pydantic import BaseModel
 
 from demo.mcp.tools.get_pcaps import get_capture_file_path
+from demo.services.requester import current_requester
 
 _TSHARK: Final[str] = "tshark"
 _TIMEOUT_S: Final[float] = 120.0
@@ -397,20 +398,19 @@ def _result(
         len(rows),
         total,
     )
-    _AUDIT_JSON_LOG.info(
-        "%s%s",
-        AUDIT_PREFIX,
-        json.dumps(
-            {
-                "capture_id": str(capture_id),
-                "tool": f"pcap_{view}",
-                "display_filter": display_filter,
-                "offset": offset,
-                "returned": len(rows),
-                "matched": total,
-            }
-        ),
-    )
+    record: dict[str, object] = {
+        "capture_id": str(capture_id),
+        "tool": f"pcap_{view}",
+        "display_filter": display_filter,
+        "offset": offset,
+        "returned": len(rows),
+        "matched": total,
+    }
+    # Multi-user mode only: who asked. Single-user records keep their original fields.
+    requester = current_requester()
+    if requester is not None:
+        record["user"] = requester.email or requester.user_id
+    _AUDIT_JSON_LOG.info("%s%s", AUDIT_PREFIX, json.dumps(record))
     return PcapFilterResult(
         capture_id=capture_id,
         view=view,
