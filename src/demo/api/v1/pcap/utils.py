@@ -72,12 +72,21 @@ def read_open_webui_file(file_id: str) -> tuple[str, bytes] | None:
 STAGING_ROOT: Final[Path] = Path(os.environ.get("DEMO_STAGING_DIR", "/var/lib/demo/staging"))
 
 
-def stage_bytes(data: bytes) -> str:
-    """Write raw bytes to a fresh staging entry and return its ref id."""
+STAGING_OWNER_FILE: Final[str] = "owner"
+
+
+def stage_bytes(data: bytes, owner: str | None = None) -> str:
+    """Write raw bytes to a fresh staging entry and return its ref id.
+
+    ``owner`` (multi-user mode) is the uploading user's id, kept next to the
+    bytes so the capture is registered as theirs when it is ingested.
+    """
     ref = uuid.uuid4().hex
     entry_dir = STAGING_ROOT / ref
     entry_dir.mkdir(parents=True, exist_ok=False, mode=0o700)
     (entry_dir / "attachment.bin").write_bytes(data)
+    if owner is not None:
+        (entry_dir / STAGING_OWNER_FILE).write_text(owner, encoding="utf-8")
     return ref
 
 

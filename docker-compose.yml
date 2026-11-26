@@ -5,7 +5,7 @@ services:
     image: postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
     container_name: demo-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-demo}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-demo_pass}
@@ -27,7 +27,7 @@ services:
     container_name: demo-ollama
     runtime: nvidia
     ports:
-      - "11435:11434"
+      - "127.0.0.1:11435:11434"
     volumes:
       - ollama-models:/root/.ollama
     environment:
@@ -53,8 +53,8 @@ services:
     container_name: demo-hermes
     command: gateway run
     ports:
-      - "8642:8642"
-      - "9119:9119"
+      - "127.0.0.1:8642:8642"
+      - "127.0.0.1:9119:9119"
     environment:
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
@@ -79,7 +79,7 @@ services:
     build: .
     container_name: demo-backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic

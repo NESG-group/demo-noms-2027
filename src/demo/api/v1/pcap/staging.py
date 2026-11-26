@@ -35,7 +35,7 @@ def _strip_open_webui_file_context(text: str, pcap_ids: set[str]) -> str:
     return text.strip()
 
 
-def _stage_pcap_ids_in_text(text: str) -> str:
+def _stage_pcap_ids_in_text(text: str, owner: str | None = None) -> str:
     """Stage pcap files referenced by id in Open WebUI's text payload.
 
     Each pcap is replaced by a `[pcap attachment staged: ...]` marker, and the
@@ -50,7 +50,7 @@ def _stage_pcap_ids_in_text(text: str) -> str:
         filename, data = resolved
         if not looks_like_pcap(filename, None):
             continue
-        ref = stage_bytes(data)
+        ref = stage_bytes(data, owner)
         pcap_ids.add(file_id)
         markers.append(f"\n[pcap attachment staged: pcap_ref={ref}, filename={filename}]")
     if not pcap_ids:
@@ -58,11 +58,13 @@ def _stage_pcap_ids_in_text(text: str) -> str:
     return _strip_open_webui_file_context(text, pcap_ids) + "".join(markers)
 
 
-def stage_pcap_attachments(messages: list[ChatMessage]) -> list[dict[str, object]]:
+def stage_pcap_attachments(messages: list[ChatMessage], owner: str | None = None) -> list[dict[str, object]]:
     """
     Scan messages for pcap-like attachments, write their raw bytes to the
     staging directory, and replace those content parts with a short text
     note the LLM can read and act on directly (no transcription needed).
+
+    ``owner`` (multi-user mode) is recorded with every staged attachment.
 
     Returns plain dicts ready to forward to Hermes (mirrors the previous
     `message.model_dump()` shape used by the router).
@@ -71,7 +73,7 @@ def stage_pcap_attachments(messages: list[ChatMessage]) -> list[dict[str, object
 
     for message in messages:
         if isinstance(message.content, str):
-            result.append({"role": message.role, "content": _stage_pcap_ids_in_text(message.content)})
+            result.append({"role": message.role, "content": _stage_pcap_ids_in_text(message.content, owner)})
             continue
 
         new_parts: list[object] = []
@@ -86,7 +88,7 @@ def stage_pcap_attachments(messages: list[ChatMessage]) -> list[dict[str, object
                     if resolved is not None:
                         filename, data = resolved
                 if data is not None and looks_like_pcap(filename, None):
-                    ref = stage_bytes(data)
+                    ref = stage_bytes(data, owner)
                     new_parts.append(
                         {
                             "type": "text",
@@ -99,7 +101,7 @@ def stage_pcap_attachments(messages: list[ChatMessage]) -> list[dict[str, object
                 data = decode_data_uri(part.image_url.url)
                 mime_hint = part.image_url.url.split(";", 1)[0].removeprefix("data:") if data else None
                 if data is not None and looks_like_pcap(None, mime_hint):
-                    ref = stage_bytes(data)
+                    ref = stage_bytes(data, owner)
                     new_parts.append({"type": "text", "text": f"[pcap attachment staged: pcap_ref={ref}]"})
                     continue
                 new_parts.append(part.model_dump())

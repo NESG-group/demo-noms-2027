@@ -8,9 +8,11 @@ from typing import Final, TypedDict
 
 from scapy.utils import PcapReader
 
+from demo.api.v1.pcap.utils import STAGING_OWNER_FILE
 from demo.config import settings
 from demo.db.session import get_session
 from demo.services.datalake_ingest import ingest_capture_to_datalake
+from demo.services.requester import current_requester, multi_user_enabled
 
 STAGING_ROOT: Final[Path] = Path(os.environ.get("DEMO_STAGING_DIR", "/var/lib/demo/staging"))
 QUARANTINE_ROOT: Final[Path] = Path(os.environ.get("DEMO_QUARANTINE_DIR", "/var/lib/demo/quarantine"))
@@ -57,7 +59,15 @@ def _is_safe_ref(pcap_ref: str) -> bool:
     return True
 
 
-async def _persist_to_datalake(data: bytes) -> uuid.UUID:
+def _staged_owner(entry_dir: Path) -> str | None:
+    """Uploader recorded at staging time (multi-user mode), or None."""
+    owner_file = entry_dir / STAGING_OWNER_FILE
+    if not owner_file.is_file():
+        return None
+    return owner_file.read_text(encoding="utf-8").strip() or None
+
+
+async def _persist_to_datalake(data: bytes, owner: str | None = None) -> uuid.UUID:
     """Write a persistent copy of the attachment and register it in the
     datalake catalog. Raises on failure — caller decides how to report it."""
     capture_id = uuid.uuid4()
@@ -67,7 +77,7 @@ async def _persist_to_datalake(data: bytes) -> uuid.UUID:
     pcap_path.write_bytes(data)
 
     async with get_session() as session:
-        await ingest_capture_to_datalake(session, pcap_path, capture_id=capture_id)
+        await ingest_capture_to_datalake(session, pcap_path, capture_id=capture_id, owner=owner)
 
     return capture_id
 
@@ -91,6 +101,13 @@ async def ingest_pcap(pcap_ref: str) -> IngestResult | IngestError:
     staged_path = STAGING_ROOT / pcap_ref / "attachment.bin"
     if not staged_path.is_file():
         return IngestError(ok=False, reason="ref_not_found")
+
+    owner = _staged_owner(staged_path.parent)
+    if multi_user_enabled():
+        requester = current_requester()
+        # Another user's attachment is reported exactly like a missing one.
+        if requester is None or owner != requester.user_id:
+            return IngestError(ok=False, reason="ref_not_found")
 
     data = staged_path.read_bytes()
     shutil.rmtree(staged_path.parent, ignore_errors=True)
@@ -122,7 +139,7 @@ async def ingest_pcap(pcap_ref: str) -> IngestResult | IngestError:
         return IngestError(ok=False, reason=f"structurally_invalid: {exc}")
 
     try:
-        capture_id = await _persist_to_datalake(data)
+        capture_id = await _persist_to_datalake(data, owner)
     except Exception as exc:  # noqa: BLE001
         target_path.unlink(missing_ok=True)
         request_dir.rmdir()

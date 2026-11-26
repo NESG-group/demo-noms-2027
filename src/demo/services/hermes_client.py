@@ -23,7 +23,7 @@ class HermesClient:
         """
         self._base_url = (base_url or settings.hermes_base_url).rstrip("/")
         self._api_key = api_key or settings.hermes_api_key
-        self._client = httpx.AsyncClient(timeout=60.0)
+        self._client = httpx.AsyncClient(timeout=settings.hermes_timeout_s)
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""

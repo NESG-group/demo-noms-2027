@@ -24,3 +24,5 @@ class Capture(Base):
     file_path: Mapped[str] = mapped_column(String(length=1024), nullable=False)
     event_start: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     event_end: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    # Open WebUI user id that uploaded it; NULL in single-user mode or for older rows.
+    owner: Mapped[str | None] = mapped_column(String(length=255), nullable=True, index=True)

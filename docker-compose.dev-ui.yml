@@ -8,7 +8,7 @@ services:
     image: ghcr.io/open-webui/open-webui@sha256:1a6399d237dc392a2313e0ca826020b3fd5d22536357840eb63393d18dc8b924
     container_name: demo-ui-dev
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
     environment:
       - OPENAI_API_BASE_URL=http://demo-backend:8000/v1
       - OPENAI_API_KEY=not-needed

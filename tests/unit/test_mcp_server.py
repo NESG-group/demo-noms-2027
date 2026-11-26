@@ -31,7 +31,7 @@ async def test_ingest_pcap_resolves_staged_reference(tmp_path: Path, monkeypatch
 
     datalake_capture_id = uuid.uuid4()
 
-    async def fake_persist_to_datalake(_data: bytes) -> uuid.UUID:
+    async def fake_persist_to_datalake(_data: bytes, _owner: str | None = None) -> uuid.UUID:
         return datalake_capture_id
 
     monkeypatch.setattr(ingest_module, "_persist_to_datalake", fake_persist_to_datalake)
@@ -57,7 +57,7 @@ async def test_ingest_pcap_reports_datalake_registration_failure(
     monkeypatch.setattr(ingest_module, "STAGING_ROOT", staging_root)
     monkeypatch.setattr(ingest_module, "QUARANTINE_ROOT", quarantine_root)
 
-    async def failing_persist_to_datalake(_data: bytes) -> uuid.UUID:
+    async def failing_persist_to_datalake(_data: bytes, _owner: str | None = None) -> uuid.UUID:
         raise RuntimeError("db unreachable")
 
     monkeypatch.setattr(ingest_module, "_persist_to_datalake", failing_persist_to_datalake)
