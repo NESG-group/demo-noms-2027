@@ -79,19 +79,33 @@ async def list_captures(start: str | None = None, end: str | None = None) -> lis
 
 
 @mcp.tool()
-async def pcap_ip(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
+async def pcap_ip(
+    capture_id: str,
+    offset: int = 0,
+    limit: int = 100,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     IPv4 view of a stored capture: frame number, src/dst IP, protocol name,
     TTL and IP header fields per packet. Use it for L3 questions (who talks to
     whom, TTL anomalies, protocol distribution). No ports, no flags, no
-    application text. To pair IPs with TCP/UDP fields, join with pcap_tcp or
-    pcap_udp on frame.number.
+    application text.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
+    To pair IPs with TCP/UDP fields, look up the SAME frame number: call this
+    view with frame_from=F and frame_to=F (or a small range around F), where F
+    is a frame.number you already read in pcap_tcp or pcap_udp.
+
+    capture_id: a UUID from list_captures or ingest_pcap.
+    frame_from/frame_to: optional inclusive frame range. ONLY use them to fetch a
+    frame you ALREADY read in another view (frame_from=F, frame_to=F). Never use
+    them to scan the capture in blocks like 1-100: your first call must not set them.
+    offset/limit: paging over the returned rows (limit at most 150). offset
+    counts rows, NOT frame numbers.
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return _compact(await _pcap_ip(parsed_id, offset, limit))
+        return _compact(await _pcap_ip(parsed_id, offset, limit, frame_from, frame_to))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 
@@ -113,19 +127,34 @@ async def pcap_arp(capture_id: str, offset: int = 0, limit: int = 100) -> Annota
 
 
 @mcp.tool()
-async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
+async def pcap_tcp(
+    capture_id: str,
+    offset: int = 0,
+    limit: int = 100,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     TCP view of a stored capture: frame number, ports, flags (e.g. "SYN,ACK"),
-    seq/ack, window and payload length per packet. No IP addresses: join with
-    pcap_ip on frame.number when they are needed. Use it for handshakes, SYN
-    scans, resets and connection behaviour. ICMP errors that merely quote a TCP
-    header are excluded.
+    seq/ack, window and payload length per packet. No IP addresses.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
+    START HERE for any question that involves a port, a service or a server role
+    (file server, DNS server, web server): ports exist only in TCP/UDP views. Call
+    it normally (no frame range), find the matching row and note its frame.number F;
+    then call pcap_ip with frame_from=F and frame_to=F to get the IP addresses.
+    Use it for handshakes, SYN scans, resets and connection behaviour. ICMP errors
+    that merely quote a TCP header are excluded.
+
+    capture_id: a UUID from list_captures or ingest_pcap.
+    frame_from/frame_to: optional inclusive frame range. ONLY use them to fetch a
+    frame you ALREADY read in another view. Never use them to scan the capture in
+    blocks like 1-100: your first call must not set them.
+    offset/limit: paging over the returned rows (limit at most 150). offset
+    counts rows, NOT frame numbers.
     """
     parsed_id = _parse_capture_id(capture_id)
     try:
-        return _compact(await _pcap_tcp(parsed_id, offset, limit))
+        return _compact(await _pcap_tcp(parsed_id, offset, limit, frame_from, frame_to))
     except CaptureNotFoundError as exc:
         raise ValueError(str(exc)) from exc
 
@@ -134,11 +163,13 @@ async def pcap_tcp(capture_id: str, offset: int = 0, limit: int = 100) -> Annota
 async def pcap_udp(capture_id: str, offset: int = 0, limit: int = 100) -> Annotated[CallToolResult, PcapFilterResult]:
     """
     UDP view of a stored capture: frame number, ports and UDP length per
-    packet. No IP addresses: join with pcap_ip on frame.number when they are
-    needed. Use it for DNS/NTP/DHCP-style traffic, beaconing patterns and UDP
-    scans. ICMP errors that merely quote a UDP header are excluded.
+    packet. No IP addresses: to get them, call pcap_ip with frame_from=F and
+    frame_to=F, where F is the frame.number you read here. Start here for
+    questions about DNS/NTP/DHCP-style services, beaconing patterns and UDP scans.
+    ICMP errors that merely quote a UDP header are excluded.
 
-    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging (limit at most 150).
+    capture_id: a UUID from list_captures or ingest_pcap. offset/limit: paging
+    over the returned rows (limit at most 150). offset counts rows, NOT frame numbers.
     """
     parsed_id = _parse_capture_id(capture_id)
     try:

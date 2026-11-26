@@ -1,6 +1,6 @@
 model:
   default: qwen2.5:72b
-  provider: custom
+  provider: ollama-local
   base_url: http://ollama:11434/v1
   context_length: 65536
   ollama_num_ctx: 65536
@@ -28,3 +28,9 @@ auxiliary:
 tools:
   tool_search:
     enabled: "off"
+custom_providers:
+  - name: ollama-local
+    base_url: http://ollama:11434/v1
+    api_key: ollama-local-key
+    extra_body:
+      temperature: 0

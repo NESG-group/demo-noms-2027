@@ -377,6 +377,16 @@ async def _run_tshark(args: Sequence[str], *, offset: int, limit: int) -> tuple[
 def _bounds(offset: int, limit: int) -> tuple[int, int]:
     return max(0, offset), max(1, min(limit, _MAX_LIMIT))
 
+def _with_frame_range(base: str, frame_from: int | None, frame_to: int | None) -> str:
+    """Restrict a view's fixed filter to a frame-number range (ints only, so no injection)."""
+    if frame_from is None and frame_to is None:
+        return base
+    parts = [f"({base})"]
+    if frame_from is not None:
+        parts.append(f"frame.number >= {max(1, int(frame_from))}")
+    if frame_to is not None:
+        parts.append(f"frame.number <= {int(frame_to)}")
+    return " && ".join(parts)
 
 def _result(
     capture_id: uuid.UUID,
@@ -408,6 +418,8 @@ def _result(
                 "offset": offset,
                 "returned": len(rows),
                 "matched": total,
+                "first_frame": rows[0][0] if rows else None,
+                "last_frame": rows[-1][0] if rows else None,
             }
         ),
     )
@@ -424,13 +436,21 @@ def _result(
     )
 
 
-async def _field_view(capture_id: uuid.UUID, view: ViewName, offset: int, limit: int) -> PcapFilterResult:
+async def _field_view(
+    capture_id: uuid.UUID,
+    view: ViewName,
+    offset: int,
+    limit: int,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> PcapFilterResult:
     spec = _FIELD_VIEWS[view]
+    display_filter = _with_frame_range(spec.display_filter, frame_from, frame_to)
     offset, limit = _bounds(offset, limit)
     file_path = await get_capture_file_path(capture_id)
 
     args = [_TSHARK, "-n", "-r", file_path, "-T", "fields", "-E", "separator=\t", "-E", "occurrence=f"]
-    args += ["-Y", spec.display_filter]
+    args += ["-Y", display_filter]
     for field in spec.fields:
         args += ["-e", field]
 
@@ -445,29 +465,52 @@ async def _field_view(capture_id: uuid.UUID, view: ViewName, offset: int, limit:
         for fix in spec.fixes:
             fix(row)
         rows.append([row[c] for c in columns])
-    return _result(capture_id, view, spec.display_filter, columns, rows, total, offset, warning)
-
+    return _result(capture_id, view, display_filter, columns, rows, total, offset, warning)
 
 # --------------------------------------------------------------------------- #
 # Public views
 # --------------------------------------------------------------------------- #
 
 
-async def pcap_ip(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
+async def pcap_ip(
+    capture_id: uuid.UUID,
+    offset: int = 0,
+    limit: int = _DEFAULT_LIMIT,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> PcapFilterResult:
     """IPv4 packets with address, protocol name, TTL and length."""
-    return await _field_view(capture_id, "ip", offset, limit)
+    return await _field_view(capture_id, "ip", offset, limit, frame_from, frame_to)
 
 
-async def pcap_arp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
+async def pcap_arp(
+    capture_id: uuid.UUID,
+    offset: int = 0,
+    limit: int = _DEFAULT_LIMIT,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> PcapFilterResult:
     """ARP requests and replies with opcode and sender/target MAC and IP."""
-    return await _field_view(capture_id, "arp", offset, limit)
+    return await _field_view(capture_id, "arp", offset, limit, frame_from, frame_to)
 
 
-async def pcap_tcp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
+async def pcap_tcp(
+    capture_id: uuid.UUID,
+    offset: int = 0,
+    limit: int = _DEFAULT_LIMIT,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> PcapFilterResult:
     """Packets whose outer transport is TCP, with ports, flags and seq/ack (no IP addresses)."""
-    return await _field_view(capture_id, "tcp", offset, limit)
+    return await _field_view(capture_id, "tcp", offset, limit, frame_from, frame_to)
 
 
-async def pcap_udp(capture_id: uuid.UUID, offset: int = 0, limit: int = _DEFAULT_LIMIT) -> PcapFilterResult:
+async def pcap_udp(
+    capture_id: uuid.UUID,
+    offset: int = 0,
+    limit: int = _DEFAULT_LIMIT,
+    frame_from: int | None = None,
+    frame_to: int | None = None,
+) -> PcapFilterResult:
     """Packets whose outer transport is UDP, with ports and length (no IP addresses)."""
-    return await _field_view(capture_id, "udp", offset, limit)
+    return await _field_view(capture_id, "udp", offset, limit, frame_from, frame_to)

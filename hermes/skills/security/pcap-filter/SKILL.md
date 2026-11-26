@@ -1,85 +1,94 @@
 ---
 name: pcap-filter
-description: ALWAYS use when the message contains a `[pcap attachment staged: pcap_ref=...]` marker, even if the question is only about IPs, ports or protocols: ingest the capture first, then answer. Also use for any analysis of ALREADY STORED captures (capture_id, UUID, latest capture, time range, listing available captures): any question about the packets, addresses, ports or protocols they contain. Applies the matching view (pcap_tcp, pcap_udp, pcap_arp, pcap_ip).
+description: Use for any question about packets, IPs, ports, MACs, or protocols in a stored capture. Triggers — message contains `[pcap attachment staged: pcap_ref=...]` (ingest first, always, even if the question is only about IPs/ports), references a capture_id (UUID), asks for latest or by time range, or asks which captures exist. Applies pcap_ip, pcap_tcp, pcap_udp, or pcap_arp.
 ---
 
-# Protocol Filtering and Packet Views of Stored Captures
+# pcap-filter
 
-## Hard rules
+## Hard rules (correctness)
 
-- If the message contains a `[pcap attachment staged: pcap_ref=...]` marker,
-  your FIRST action is `ingest_pcap(pcap_ref=<exact token>)`. Do not read,
-  answer or plan anything before it. The question is answered about THAT
-  capture.
-- Every IP, port, MAC or count in the answer must come from rows returned by
-  a view in this turn. Never answer from assumptions or prior context.
-  Answering a packet-data question without a view call is always wrong.
-- Never end a turn announcing what you will do. If another call is needed,
-  make it; the turn ends only with the final answer.
-- Do not change your view choice because the user questions it, unless the
-  columns of the view used really lack the requested data.
+1. Marker `[pcap attachment staged: pcap_ref=X]` → first call is `ingest_pcap(pcap_ref=X)`. Always. Before reading, answering, or planning. The question is answered about THAT capture.
+2. Every IP, port, MAC, protocol, or count in the answer comes from a view row read this turn. No view call → no answer. Answering a packet-data question without a view call is always wrong.
+3. Counting questions ("how many TCP packets"): the answer is `matched_count` of one view call. Do not page to count.
+4. If after 2 pages you have not found the target row, say so. Do not invent values, do not extrapolate from rows seen.
+
+## Hard rules (style)
+
+5. After a tool result: next message is a tool call OR the final answer. Do not narrate intent ("I will…", "Let's…"). A message with text and no tool call ends the turn.
+6. Be decisive: pick the minimal set of views, call them, answer. Do not re-pick views on user pushback unless the columns used truly lack a needed field.
 
 ## Tools
 
-- `list_captures(start?, end?)`: captures in the datalake, newest first.
-- `ingest_pcap(pcap_ref)`: registers an attachment staged by the API.
-- `pcap_ip`, `pcap_arp`, `pcap_tcp`, `pcap_udp` (parameters: `capture_id`,
-  `offset=0`, `limit=100`, at most 150). Each applies one fixed display filter.
+- `list_captures(start?, end?)` — captures in the datalake, newest first.
+- `ingest_pcap(pcap_ref)` — registers an attachment staged by the API; returns `capture_id`.
+- `pcap_ip`, `pcap_arp`, `pcap_tcp`, `pcap_udp` — params: `capture_id`, `offset=0`, `limit=100` (max 150), optional `frame_from`, `frame_to`. Each applies one fixed display filter; you cannot change the filter.
 
-## What each view contains
+## Views
 
-| Tool | Fixed display filter | Columns available |
+| Tool | Filter | Columns (exclusions first) |
 | --- | --- | --- |
-| `pcap_ip` | `ip` | frame number, time, IP header fields, protocol name, TTL, src/dst IP. NO ports, NO flags |
-| `pcap_tcp` | `tcp && !icmp && !icmpv6` | frame number, time, src/dst port, seq/ack, flags, payload length, checksum, window. NO IP addresses |
-| `pcap_udp` | `udp && !icmp && !icmpv6` | frame number, time, src/dst port, UDP length, checksum. NO IP addresses |
-| `pcap_arp` | `arp` | frame number, time, opcode, sender/target MAC and IP |
+| `pcap_ip` | `ip` | **NO ports, NO flags.** frame.number, time, ip.version, hdr_len, dsfield, len, id, flags, frag_offset, ttl, proto (as name), checksum, src, dst |
+| `pcap_tcp` | `tcp && !icmp && !icmpv6` | **NO IP addresses.** frame.number, time, srcport, dstport, seq, ack, flags (as list), len, checksum, window |
+| `pcap_udp` | `udp && !icmp && !icmpv6` | **NO IP addresses.** frame.number, time, srcport, dstport, length, checksum |
+| `pcap_arp` | `arp` | frame.number, time, hw.type, proto.type, hw.size, proto.size, opcode, sender MAC+IP, target MAC+IP |
 
-Every view has `frame.number`, the packet number in the capture. It is the
-only column shared by all views.
+`frame.number` is the only column shared by all views. It is the packet number in the capture.
 
-## Workflow (all in the same turn; never stop to ask or announce)
+## Step 0 — Resolve `capture_id`
 
-### Step 0: Resolve the capture (mandatory, always first)
-- `[pcap attachment staged: pcap_ref=...]` marker present: call
-  `ingest_pcap(pcap_ref=<exact token>)` and use the returned `capture_id`.
-- UUID given: use it as `capture_id`. Never invent one.
-- By time or the latest capture: call `list_captures` and take the matching entry.
-- Asked which captures exist: report the list and stop.
-- No capture specified and no marker: call `list_captures()` and use the
-  newest. If it returns nothing, say there are no captures and stop.
+| Situation | Action |
+| --- | --- |
+| Marker `[pcap attachment staged: pcap_ref=X]` | `ingest_pcap(pcap_ref=X)`, use returned `capture_id` |
+| UUID in message | use it directly; never invent one |
+| "latest" or time range | `list_captures(start, end)`, take first |
+| "which captures exist" | `list_captures`, report list, **STOP** |
+| nothing specified | `list_captures()`, use newest; if empty, say so and **STOP** |
 
-### Step 1: Choose the views from the fields requested
-List the fields the question needs and compare them with the columns in the
-table above. Use the fewest views whose columns, together, cover all of them:
-one view when a single view has every field, more only when no single view
-does. Name to yourself the field that forces each extra view; if you cannot,
-do not call it.
+## Step 1 — Pick the views
 
-To combine two views, join their rows by `frame.number`: a row of one view
-and a row of the other describe the same packet only when their
-`frame.number` is equal. Keep only frames present in both views; never pair
-rows by position or by order.
+List the fields the question needs. Match them to the Columns row above.
 
-Never call the same view twice with the same arguments, and never try other
-views because a view returned `matched_count: 0`.
+- **Default: one view.** Call a second only if you can name the field that forces it. If you cannot name that field, do not call it.
+- `matched_count: 0` is a valid result: report it, do not try other views.
 
-### Step 2: Call the view and read ALL the rows
-- Read `columns` and `rows`.
-- If `truncated` is true, call the same view again with `offset` increased by
-  the number of rows received, until `truncated` is false. Do not answer an
-  inventory, a unique-values list or a count from a partial page.
-- Derive unique values, counts and ranges only from returned rows. If the
-  result is too large to process reliably, say so instead of estimating.
-- `matched_count: 0` is a valid result: report it.
-- If a tool returns an error, state the error once and stop.
+### Joining two views by packet
 
-### Step 3: Post-process
-- When the question asks for unique values or tuples, deduplicate them.
-- Follow the output format given by the user exactly.
+Two views describe the same packet only when their `frame.number` is equal. Never pair rows by position or by order.
 
-## Answer
+Recipe:
+1. Call the view whose columns let you **identify** the target packet (port, flag, ARP opcode). Find the row with `frame.number = F`.
+2. Call the other view with `frame_from=F, frame_to=F`.
+3. Verify the returned row has `frame.number = F`. If it does not, the match is not confirmed: say so, do not answer.
 
-Give only the requested result (list or table), in the user's language. Do not
-narrate intermediate steps and do not mention paging, `offset`, `limit` or
-`truncated` unless data is actually missing.
+Example — "Which host is the database server receiving connections on port 3306?":
+- IP + port needed; no single view has both → two views.
+- `pcap_tcp` (normal call): read rows until one has `tcp.dstport = 3306` (or `srcport`). Note its `frame.number = F`.
+- `pcap_ip` with `frame_from=F, frame_to=F`. The server is the side that owns the port: if `dstport = 3306` take `ip.dst`; if `srcport = 3306` take `ip.src`.
+- Never answer an IP from `pcap_ip` alone for a question about a port.
+
+### `offset` semantics
+
+- `offset` counts **rows of the view you are calling**, never frame numbers.
+- Row N of a filtered view is almost never frame N. Never use `frame.number - 1` as an offset.
+- Never call the same view twice with the same arguments.
+
+## Step 2 — Call and read
+
+- Read `columns` and `rows` from every result.
+- `frame_from` / `frame_to` are ONLY for looking up a frame you already read in another view. Never use them to scan the capture in blocks (1-100, 101-200, …): that never reaches late frames and wastes calls. 
+- If the user gives you a frame number N, call the tool with frame_from=N and frame_to=N. Never read it from a page of rows.
+- **Pagination budget**: max 2 pages per view per turn (`limit=150 × 2 = 300` rows). If `matched_count > 300`, do not page further: answer from what you read and say it is partial.
+- Page with `offset` only when the target row was not in the page just read. Never page "to see what's next" without a specific field value to find.
+- `truncated=True` means more rows exist beyond those returned. Page only if the evidence you need is missing.
+- `warning` present (e.g. capture truncated at last packet): include it briefly in the answer.
+- If a tool returns an error, state it once and stop.
+
+## Step 3 — Post-process and answer
+
+- Deduplicate when the question asks for unique values or tuples.
+- Aggregation (top N, grouped counts): only from rows already read. State the result is partial if `matched_count > rows seen`.
+- Time-filtered queries are not supported by the views; answer from rows read and mark as partial if needed.
+- Give only the requested result (list or table), in the user's language.
+- Do not narrate intermediate steps; do not mention `offset`, `limit`, or `truncated` unless data is actually missing.
+
+For answers that combine two views, the `frame.number` of the row used in each view must be the same. If it is not, you have not confirmed the match: say so instead of answering.
